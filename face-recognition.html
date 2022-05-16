@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="css/qr-scan.css">
+
+    <title>Face Recognition</title>
+  </head>
+  <body>
+    <div id="qr-scan">
+      <header class="d-flex justify-content-between align-items-center mb-5">
+        <img src="images/logo.svg" alt="">
+        <div>
+          <a href="" class="" data-toggle="modal" data-target="#modal-exit"><span class="material-icons">reply</span></a>
+          <a href="" class="" data-toggle="modal" data-target="#modal-exit"><span class="material-icons">home</span></a>
+          <a href="" class="" data-toggle="modal" data-target="#modal-exit"><span class="material-icons">clear</span></a>
+        </div>
+      </header>
+
+      <main class="container position-relative text-center">
+        <h1 class="mb-1">Face Recognition</h1>
+        <p class="pb-3">Please use our machine camera to scan.<a href="" class="bold" data-toggle="modal" data-target="#modal-find-cam">Tap here</a> to locate the camera </p>
+        
+        <div class="scanner position-relative pb-5 mb-5" id="switchFrontBtn">
+          <!-- add autoplay muted playsinline for iOS -->
+          <video id="cam" autoplay muted playsinline>Not available</video>
+          <canvas id="canvas" style="display:none"></canvas>  
+          <!-- <img id="photo" alt="The screen capture will appear in this box.">   -->
+          <span class="material-icons">fullscreen</span>
+        </div>
+        
+        
+        <div class="">
+          <a href="" class="button secondary mr-3">Cancel</a>
+          <button class="button primary" id="snapBtn">Proceed</button>
+        </div>
+
+         <!-- popup -->
+        <div class="popup warning d-none">
+          <div class="d-flex align-items-center">
+            <span class="material-icons">warning</span>
+            <div>
+              <h3>Face not registered</h3>
+              <p>Having trouble while scanning? <br>  <a href="">Try other ways</a></p>
+            </div>
+            <span class="material-icons close">close</span>
+          </div>
+        </div>
+
+        <!-- Modal -->
+        <div class="modal fade" id="modal-exit">
+          <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content text-center p-5">
+              <h4 class="modal-title pb-5">Are you sure you want to cancel 
+                your trasanction?</h4>
+             
+              <div class="pb-5">
+                <a href="" class="button secondary mr-3">Yes</a>
+                <a href="" class="button primary" data-dismiss="modal" aria-label="Close">No</a>
+              </div>
+
+              <p>Cancelling your transaction will eject your ATM card </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal fade" id="modal-find-cam">
+          <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content text-center p-5">
+              <h4 class="modal-title pb-5">Our camera is located here.</h4>
+              <div class="mb-3">
+                <img src="images/cam-location.png" alt="">
+              </div>
+             
+              <div class="pb-5">
+                <a href="" class="button primary mr-3" data-dismiss="modal" aria-label="Close">Close</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+      </main>
+    </div>
+    
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <script>
+      /*
+      Please try with devices with camera!
+      */
+
+      /*
+      Reference: 
+      https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia
+      https://developers.google.com/web/updates/2015/07/mediastream-deprecations?hl=en#stop-ended-and-active
+      https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Taking_still_photos
+      */
+
+      // reference to the current media stream
+      var mediaStream = null;
+
+      // Prefer camera resolution nearest to 1280x720.
+      var constraints = { 
+        audio: false, 
+        video: { 
+          width: {ideal: 640}, 
+          height: {ideal: 480},
+          facingMode: "environment"
+        } 
+      }; 
+
+      async function getMediaStream(constraints) {
+        try {
+          mediaStream =  await navigator.mediaDevices.getUserMedia(constraints);
+          let video = document.getElementById('cam');    
+          video.srcObject = mediaStream;
+          video.onloadedmetadata = (event) => {
+            video.play();
+          };
+        } catch (err)  {    
+          console.error(err.message);   
+        }
+      };
+
+      async function switchCamera(cameraMode) {  
+        try {
+          // stop the current video stream
+          if (mediaStream != null && mediaStream.active) {
+            var tracks = mediaStream.getVideoTracks();
+            tracks.forEach(track => {
+              track.stop();
+            })      
+          }
+          
+          // set the video source to null
+          document.getElementById('cam').srcObject = null;
+          
+          // change "facingMode"
+          constraints.video.facingMode = cameraMode;
+          
+          // get new media stream
+          await getMediaStream(constraints);
+        } catch (err)  {    
+          console.error(err.message); 
+          alert(err.message);
+        }
+      }
+
+      function takePicture() {  
+        let canvas = document.getElementById('canvas');
+        let video = document.getElementById('cam');
+        let photo = document.getElementById('photo');  
+        let context = canvas.getContext('2d');
+        
+        const height = video.videoHeight;
+        const width = video.videoWidth;
+        
+        if (width && height) {    
+          canvas.width = width;
+          canvas.height = height;
+          context.drawImage(video, 0, 0, width, height);    
+          var data = canvas.toDataURL('image/png');
+          photo.setAttribute('src', data);
+        } else {
+          clearphoto();
+        }
+      }
+
+      function clearPhoto() {
+        let canvas = document.getElementById('canvas');
+        let photo = document.getElementById('photo');
+        let context = canvas.getContext('2d');
+        
+        context.fillStyle = "#AAA";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        var data = canvas.toDataURL('image/png');
+        photo.setAttribute('src', data);
+      }
+
+      document.getElementById('switchFrontBtn').onclick = (event) => {
+        switchCamera("user");
+      }
+
+      document.getElementById('snapBtn').onclick = (event) => {  
+        takePicture();
+        event.preventDefault();
+      }
+
+      clearPhoto();
+    </script>
+  </body>
+</html>
